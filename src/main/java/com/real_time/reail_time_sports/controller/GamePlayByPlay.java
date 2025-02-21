@@ -7,26 +7,32 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.real_time.reail_time_sports.backend.NbaGameService;
 import com.real_time.reail_time_sports.model.PlayByPlayModel;
 
+import reactor.core.publisher.Mono;
+
 
 @RestController
 public class GamePlayByPlay {
     
     NbaGameService nbaGameService;
+    WebClient webClient;
 
     @Autowired
-    public GamePlayByPlay(NbaGameService nbaGameService) {
+    public GamePlayByPlay(NbaGameService nbaGameService, WebClient webClient) {
         this.nbaGameService = nbaGameService;
+        this.webClient = webClient;
     }
 
     @RequestMapping(value="/game/playbyplay", method=RequestMethod.GET)
     public PlayByPlayModel requestMethodName(@RequestParam String gameId) throws JsonProcessingException {
         HashMap<String, PlayByPlayModel> map = castResponseFromGameService(gameId);
+        //Mono<PlayByPlayModel> modelObject = makeAsynchronousFetch(gameId);
         PlayByPlayModel entity = flattenMap(map);
         return entity;
     }
@@ -35,6 +41,10 @@ public class GamePlayByPlay {
         ObjectMapper mapper = new ObjectMapper();
         String playerStatsJsonString = new ObjectMapper().writeValueAsString(map);
         return mapper.readValue(playerStatsJsonString, PlayByPlayModel.class);
+    }
+
+    private Mono<PlayByPlayModel> makeAsynchronousFetch(String gameId) {
+        return nbaGameService.gamePlayByPlayRequest(gameId);
     }
     
     private <T> T castResponseFromGameService(String gameId) {
