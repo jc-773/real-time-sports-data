@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.real_time.reail_time_sports.backend.NbaGameService;
+import com.real_time.reail_time_sports.data.DataService;
 import com.real_time.reail_time_sports.model.PlayByPlayModel;
 
 import reactor.core.publisher.Mono;
@@ -22,11 +23,13 @@ public class GamePlayByPlay {
     
     NbaGameService nbaGameService;
     WebClient webClient;
+    DataService dataService;
 
     @Autowired
-    public GamePlayByPlay(NbaGameService nbaGameService, WebClient webClient) {
+    public GamePlayByPlay(NbaGameService nbaGameService, WebClient webClient, DataService dataService) {
         this.nbaGameService = nbaGameService;
         this.webClient = webClient;
+        this.dataService = dataService;
     }
 
     @RequestMapping(value="/game/playbyplay", method=RequestMethod.GET)
@@ -34,6 +37,7 @@ public class GamePlayByPlay {
         HashMap<String, PlayByPlayModel> map = castResponseFromGameService(gameId);
         //Mono<PlayByPlayModel> modelObject = makeAsynchronousFetch(gameId);
         PlayByPlayModel entity = flattenMap(map);
+        dataService.savePlayByPlayModel(entity);
         return entity;
     }
 
