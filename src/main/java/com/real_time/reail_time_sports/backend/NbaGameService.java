@@ -24,7 +24,7 @@ public class NbaGameService {
         this.restTemplateService = restTemplateService;
     }
 
-    public Mono<PlayByPlayModel> gamePlayByPlayRequest(String gameId) {
+    public Mono<PlayByPlayModel> gamePlayByPlayRequestAsynchronous(String gameId) {
         WebClient webClient = WebClient.create();
         return webClient.get()
             .uri("https://api.sportradar.com/nba/trial/v8/en/games/\"+ gameID +\"/pbp.json?api_key=")
@@ -33,6 +33,8 @@ public class NbaGameService {
             .bodyToMono(PlayByPlayModel.class);
     }
 
+    //Using the HTTP client -RestTemplate- is synchronous and therefor its blocking calls would contradict the whole implementation of virtual threads
+    @Deprecated
     public <T> T gamePlayByPlayRequest(Class<T> clazz, String gameID) {
         String url = "https://api.sportradar.com/nba/trial/v8/en/games/"+ gameID +"/pbp.json?api_key=" + apiKey;//add api key to secret
         Hashtable<String, String> customHeaders = new Hashtable<String, String>();

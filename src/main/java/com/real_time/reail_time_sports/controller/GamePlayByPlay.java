@@ -1,7 +1,13 @@
 package com.real_time.reail_time_sports.controller;
 
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,7 +26,8 @@ import reactor.core.publisher.Mono;
 
 @RestController
 public class GamePlayByPlay {
-    
+    private static final Logger log = LoggerFactory.getLogger(GamePlayByPlay.class);
+
     NbaGameService nbaGameService;
     WebClient webClient;
     DataService dataService;
@@ -32,27 +39,27 @@ public class GamePlayByPlay {
         this.dataService = dataService;
     }
 
-    @RequestMapping(value="/game/playbyplay", method=RequestMethod.GET)
-    public PlayByPlayModel requestMethodName(@RequestParam String gameId) throws JsonProcessingException {
-        HashMap<String, PlayByPlayModel> map = castResponseFromGameService(gameId);
-        //Mono<PlayByPlayModel> modelObject = makeAsynchronousFetch(gameId);
-        PlayByPlayModel entity = flattenMap(map);
-        dataService.savePlayByPlayModel(entity);
-        return entity;
+    public void requestMethodName(@RequestParam String gameId) throws JsonProcessingException {
+        try {
+            CompletableFuture<PlayByPlayModel> modelObject = executeVirtualTask(gameId);
+            PlayByPlayModel entity = modelObject.get();
+            dataService.savePlayByPlayModel(entity);
+        } catch (Exception e) {
+            log.error("exception in requestMethodName(): {}", e);
+        }
+       
     }
 
-    private <T> PlayByPlayModel flattenMap(HashMap<String, PlayByPlayModel> map) throws JsonProcessingException  {
-        ObjectMapper mapper = new ObjectMapper();
-        String playerStatsJsonString = new ObjectMapper().writeValueAsString(map);
-        return mapper.readValue(playerStatsJsonString, PlayByPlayModel.class);
-    }
-
-    private Mono<PlayByPlayModel> makeAsynchronousFetch(String gameId) {
-        return nbaGameService.gamePlayByPlayRequest(gameId);
-    }
-    
-    private <T> T castResponseFromGameService(String gameId) {
-        //TODO: Create a model for the response
-        return (T) nbaGameService.gamePlayByPlayRequest(null, gameId);
+    /*
+     * 1. There is no semaphore in place for a thread to acquire access to a resource 
+     * 2. Put this somewhre else
+     */
+    private CompletableFuture<PlayByPlayModel> executeVirtualTask(String gameId) {
+        try(var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            executor.submit(()  -> {
+                return nbaGameService.gamePlayByPlayRequestAsynchronous(gameId);
+            });
+        }
+        return null;
     }
 }
